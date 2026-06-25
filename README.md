@@ -70,3 +70,13 @@ My focus is on developing practical, hands-on experience by building home labs, 
 * Build practical Blue Team projects and home labs.
 * Contribute to the cybersecurity community through technical write-ups.
 * Continuously improve my analytical and incident response skills.
+
+## 📚 Currently Learning
+
+* 🛡️ Advanced Security Operations Center (SOC) Workflows
+* 🔍 Threat Detection & Detection Engineering
+* 📊 SIEM Rule Creation & Log Correlation
+* 🎯 Threat Hunting Techniques
+* 🐞 Bug Bounty & Web Application Security
+* 🐧 Linux Security & System Hardening
+* 🤖 Python for Security Automation
