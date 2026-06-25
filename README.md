@@ -80,3 +80,32 @@ My focus is on developing practical, hands-on experience by building home labs, 
 * 🐞 Bug Bounty & Web Application Security
 * 🐧 Linux Security & System Hardening
 * 🤖 Python for Security Automation
+
+## 🚀 Featured Projects
+
+I'm actively building practical cybersecurity projects to strengthen my skills in Security Operations, Detection Engineering, and Incident Response.
+
+### 🛡️ SOC Home Lab
+
+A hands-on Security Operations Center (SOC) lab for monitoring, investigating, and responding to security events.
+
+### 📊 SIEM Detection Labs
+
+Detection rules, log analysis, alert investigations, and use cases using Splunk, Wazuh, ELK Stack, and ManageEngine Log360.
+
+### 🔍 Threat Hunting
+
+Practical threat hunting scenarios based on Windows event logs, Linux logs, and network telemetry.
+
+### 🚨 Incident Response
+
+Incident investigation playbooks, malware analysis walkthroughs, and response documentation.
+
+### 🐍 Python for Security
+
+Automation scripts for log parsing, IOC extraction, threat intelligence, and security operations.
+
+### 📖 Cybersecurity Notes
+
+Well-documented notes, write-ups, and learning resources covering Blue Team concepts and defensive security.
+
