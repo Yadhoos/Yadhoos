@@ -25,6 +25,12 @@ My focus is on developing practical, hands-on experience by building home labs, 
 
 ### 🎯 Current Goals
 
+* Learn Detection Engineering
+* Build Labs
+* Write Articles
+* Improve IR Skills
+
+
 ## 🛠️ Tech Stack
 
 ### 🔐 Security
