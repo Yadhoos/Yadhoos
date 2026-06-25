@@ -109,3 +109,15 @@ Automation scripts for log parsing, IOC extraction, threat intelligence, and sec
 
 Well-documented notes, write-ups, and learning resources covering Blue Team concepts and defensive security.
 
+## ✍️ Technical Writing
+
+I enjoy researching modern cybersecurity threats and sharing my learning through technical articles. Writing helps me strengthen my understanding while contributing to the cybersecurity community.
+
+### 📚 Featured Article
+
+* **The Evasive Adversary: How Cyber Threats Are Redefining Cybersecurity**
+
+  * Explores the evolving threat landscape, AI-driven attacks, hybrid identity risks, and modern defensive strategies.
+  * 🔗 Read on Medium: https://medium.com/@yadukrishnansl10/the-evasive-adversary-how-cyber-threats-are-redefining-cybersecurity-bbe3cff7beb7
+
+> More technical articles and research write-ups will be added as I continue my cybersecurity journey.
