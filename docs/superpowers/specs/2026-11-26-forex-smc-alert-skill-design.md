@@ -75,6 +75,7 @@ whether and how to trade.
 - Chart reading: approach 2 (LuxAlgo SMC indicator).
 - Labels: swing structure on 4H, internal structure on 15m.
 - R:R: strict, measured to the nearest opposing liquidity.
+- Risk 1% per trade with lot size calculated; targets 2R–10R with partial-profit suggestions.
 - Claude only notifies. It never trades.
 
 ## The checklist (every item must pass, or the result is SKIP)
@@ -114,6 +115,24 @@ filters) so the labels are the same every run.
    with better R:R doesn't rescue the setup (user's decision: strict).
    R:R = (target − entry) / (entry − stop), with signs flipped for SELL.
 
+## Risk and targets (user's decision, details proposed)
+
+- **Risk per trade: 1% of account balance.** The skill reads `balance` and
+  `account_currency` from its config file, which the user keeps up to date.
+  Lot size = (balance × 1%) ÷ (stop distance × value per pip/point per lot),
+  rounded **down** to 0.01 lots. Pip values come from per-symbol contract specs
+  in config (default: FX 100,000 units/lot; XAUUSD 100 oz/lot), with the
+  quote→account currency conversion read from the live chart price. The alert
+  says "check your broker's contract size" in the setup guide.
+- **Targets from 2R up to 10R:** TP1 is the nearest opposing liquidity and must
+  be ≥ 2R (gate above). TP2 and TP3 are the next opposing liquidity levels
+  (15m, then 4H) beyond TP1, kept only if ≤ 10R. Any level beyond 10R is
+  capped at 10R. If no further level exists, only TP1 is shown.
+- **Suggested partials (proposal):** close 50% at TP1 and move SL to
+  breakeven. Close 30% at TP2. Let the last 20% run to TP3 (or TP2 if only
+  two targets). With one target only: close 100% at TP1. The split lives in
+  config so the user can change it.
+
 **Ambiguity rule:** if any item can't be read with confidence from the
 chart (labels overlapping, chart not loaded, indicator missing), the result is
 **SKIP**, recorded with reason "unreadable". It never guesses toward an alert.
@@ -135,8 +154,9 @@ chart (labels overlapping, chart not loaded, indicator missing), the result is
    (rounded). If the same setup was alerted in the last 24 hours, don't alert
    again.
 6. For each new BUY/SELL: save the screenshots, write the log entry, and send
-   one `PushNotification`, e.g.
-   `XAUUSD SELL 2387.5-2389.0 SL 2393.2 TP 2371.0 RR 1:2.9 (NY KZ) - see log`.
+   one `PushNotification` (≤ 200 chars), e.g.
+   `XAUUSD SELL 2388.0 SL 2393.2 0.19lot(1%) TP1 2377.6(2R) TP2 2366.0(4.2R) TP3 2350.1(7.3R) NY`.
+   The full write-up in the session also gives the partial-profit plan.
 7. Append every result (including SKIP) to the log.
 
 ## Cadence
