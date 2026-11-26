@@ -1,7 +1,7 @@
 # SMC Forex Alert Skill — Design
 
 Date: 2026-11-26
-Status: Draft, awaiting approval
+Status: Awaiting user approval
 
 ## Intent
 
@@ -73,6 +73,8 @@ whether and how to trade.
 - Pairs: EURUSD, GBPUSD, XAUUSD. Timeframes: 4H and 15m.
 - Alert channel: Claude app push (option B).
 - Chart reading: approach 2 (LuxAlgo SMC indicator).
+- Labels: swing structure on 4H, internal structure on 15m.
+- R:R: strict, measured to the nearest opposing liquidity.
 - Claude only notifies. It never trades.
 
 ## The checklist (every item must pass, or the result is SKIP)
@@ -84,25 +86,32 @@ For each pair, every run:
    defined in America/New_York so DST is handled automatically, and the skill
    converts them from the PC's clock. Outside these windows the run does
    nothing (no chart reads).
-1. **4H bias:** the most recent 4H structure label is a BOS in one direction,
+**Which labels count (user's decision):** 4H rules use LuxAlgo **swing**
+structure labels. 15m rules use **internal** structure labels. SETUP.md pins
+the indicator settings (swing length, internal structure on, OB and FVG
+filters) so the labels are the same every run.
+
+1. **4H bias:** the most recent 4H **swing** structure label is a BOS in one direction,
    with structure consistent with it (bullish = higher highs and higher lows,
    bearish = the reverse). If the bias is unclear or there's a fresh opposing
-   4H CHoCH, SKIP.
+   4H swing CHoCH, SKIP.
 2. **Premium/discount (4H range):** for BUY, price is in the discount half
    (below 50%) of the current 4H dealing range. For SELL, price is in the
    premium half.
 3. **Liquidity sweep (15m):** within the last ~12 15m candles (about 3 hours),
    price took out a recent swing low or equal lows (BUY) or a swing high or
    equal highs (SELL), against the bias direction.
-4. **CHoCH (15m):** after that sweep, a 15m CHoCH formed in the direction of
+4. **CHoCH (15m):** after that sweep, a 15m **internal** CHoCH formed in the direction of
    the 4H bias.
 5. **Entry zone (15m):** a fresh (unmitigated) order block or FVG created by
    the CHoCH move, with price currently inside it or within a small distance of
    it. An OB and FVG overlapping is noted as stronger confluence but isn't
    required.
 6. **Risk-to-reward ≥ 1:2:** entry = the zone's proximal edge, stop-loss =
-   beyond the swept high or low (plus a small buffer), target = the next
-   opposing liquidity (swing high/low or equal highs/lows) on 15m or 4H.
+   beyond the swept high or low (plus a small buffer), target = the
+   **nearest** opposing liquidity (swing high/low or equal highs/lows) on
+   either timeframe. That nearest level alone must give ≥ 1:2. A further level
+   with better R:R doesn't rescue the setup (user's decision: strict).
    R:R = (target − entry) / (entry − stop), with signs flipped for SELL.
 
 **Ambiguity rule:** if any item can't be read with confidence from the
