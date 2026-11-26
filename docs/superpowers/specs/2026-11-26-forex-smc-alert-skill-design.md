@@ -1,7 +1,7 @@
 # SMC Forex Alert Skill — Design
 
 Date: 2026-11-26
-Status: Awaiting user approval
+Status: Approved by user 2026-11-26
 
 ## Intent
 
@@ -10,8 +10,15 @@ charts all day. They want a Claude Code skill that watches their own TradingView
 charts in Chrome on their PC and **alerts them only when a valid setup appears**
 (BUY or SELL). Most checks end in SKIP, and SKIP stays silent.
 
-Claude **never places trades**. It reads charts and notifies. The user decides
-whether and how to trade.
+Two modes:
+
+- **`paper` (first week):** Claude places and manages trades **on its own,
+  without asking**, on TradingView's **Paper Trading** account (simulated money).
+  The user wants a one-week trial to see whether the rules are worth trusting.
+- **`alert` (default after the trial):** Claude only notifies. The user decides
+  whether and how to trade.
+
+Claude **never** trades a real-money account in any mode.
 
 ## Goals
 
@@ -23,7 +30,8 @@ whether and how to trade.
 
 ## Non-goals
 
-- Placing, modifying or closing orders on any broker or on TradingView.
+- Placing, modifying or closing orders on any real-money broker, in any mode.
+- Any order activity in `alert` mode.
 - Backtesting or performance statistics.
 - Pairs or timeframes beyond the three pairs on 4H and 15m. The builder may make the pair list configurable but doesn't have to.
 - Working while the PC is off. The PC, Chrome and Claude Code must be running.
@@ -31,7 +39,7 @@ whether and how to trade.
 ## Anti-goals (it has failed if...)
 
 - It alerts on setups that don't meet every criterion. Noisy alerts destroy trust.
-- It interacts with any order or trade button in TradingView. It must never click Buy, Sell or Trade, or open the trading panel.
+- It clicks any order control while the trading panel shows anything other than **Paper Trading** (a real broker), or in `alert` mode.
 - It changes the user's chart drawings, indicators or saved layout, beyond switching symbol and timeframe.
 - It sends a notification for SKIP results or routine status.
 
@@ -75,7 +83,8 @@ whether and how to trade.
 - Chart reading: approach 2 (LuxAlgo SMC indicator).
 - Labels: swing structure on 4H, internal structure on 15m.
 - R:R: strict, measured to the nearest opposing liquidity.
-- Risk 1% per trade with lot size calculated; targets 2R–10R with partial-profit suggestions.
+- Risk 1% per trade with lot size calculated; targets 2R–10R with partial-profit suggestions (50/30/20 split approved).
+- One-week `paper` mode: Claude auto-trades on TradingView Paper Trading without asking, then falls back to `alert` mode.
 - Claude only notifies. It never trades.
 
 ## The checklist (every item must pass, or the result is SKIP)
@@ -136,6 +145,41 @@ filters) so the labels are the same every run.
 **Ambiguity rule:** if any item can't be read with confidence from the
 chart (labels overlapping, chart not loaded, indicator missing), the result is
 **SKIP**, recorded with reason "unreadable". It never guesses toward an alert.
+
+## Paper-trading mode (user's decision)
+
+- **Switch:** `mode` in config: `paper` or `alert`, plus `paper_until` (a date
+  one week after start). After that date the skill behaves as `alert` mode
+  without being told.
+- **Real-money guard:** immediately before every order action (place, modify,
+  cancel, close), confirm the TradingView trading panel is connected to
+  **Paper Trading**. If not, take no action, send one notification, and pause
+  trading for the session (alerts continue). SETUP.md recommends disconnecting
+  any real broker from TradingView during the trial.
+- **Placing:** on a valid setup, place **3 limit orders** at the entry price,
+  all with the same SL, and TP1/TP2/TP3 respectively, sized 50% / 30% / 20% of
+  the 1%-risk position (rounded down, minimum 0.01 lots). Lot sizes use the
+  paper account's balance read from the panel. If there's only one or two
+  targets, the split is 100%, or 60%/40% (proposal).
+- **Managing (every tick, also outside killzones):**
+  - When TP1 has filled, move the SL of the remaining orders to the entry
+    price (breakeven).
+  - Cancel unfilled entry orders if price touches the SL level first, or after
+    8 15m candles (2 hours) without a fill.
+- **De-duplication:** don't open a second trade on a pair that already has an
+  open position or pending orders from the skill.
+- **Notifications (≤ 200 chars each):** trade placed, TP1 hit + SL to
+  breakeven, trade fully closed (with result in R), entry cancelled, guard
+  triggered.
+- **Trade journal:** every trade's levels, fills, management actions and
+  final R go into `~/smc-alerts/trades.jsonl`.
+- **End-of-week report:** on the first tick after `paper_until`, write
+  `~/smc-alerts/paper-report.md` (trades, win rate, total R, per-pair results,
+  notable failures) and send a notification pointing to it.
+- **Limits:** management only happens while the PC, Chrome and loop are
+  running. Resting SL/TP orders still protect positions if the PC sleeps.
+  Claude in Chrome may need TradingView allowed so order clicks don't wait for
+  confirmation, which SETUP.md covers.
 
 ## Run flow (each loop tick)
 
