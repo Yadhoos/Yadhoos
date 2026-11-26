@@ -1,0 +1,11 @@
+{
+  "mode": "paper",
+  "paper_until": "2026-12-04",
+  "balance": 10000,
+  "account_currency": "USD",
+  "risk_pct": 1.0,
+  "symbols": {"EURUSD": "OANDA:EURUSD", "GBPUSD": "OANDA:GBPUSD", "XAUUSD": "OANDA:XAUUSD"},
+  "contracts": {},
+  "partials": {},
+  "data_dir": "~/smc-alerts"
+}
