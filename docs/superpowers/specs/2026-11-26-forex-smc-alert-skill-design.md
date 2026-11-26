@@ -155,7 +155,7 @@ chart (labels overlapping, chart not loaded, indicator missing), the result is
    again.
 6. For each new BUY/SELL: save the screenshots, write the log entry, and send
    one `PushNotification` (≤ 200 chars), e.g.
-   `XAUUSD SELL 2388.0 SL 2393.2 0.19lot(1%) TP1 2377.6(2R) TP2 2366.0(4.2R) TP3 2350.1(7.3R) NY`.
+   `XAUUSD SELL 2388.0 SL 2393.2 0.19lot(1%) TP1 2377.6(2R) TP2 2366.2(4.2R) TP3 2350.0(7.3R) NY`.
    The full write-up in the session also gives the partial-profit plan.
 7. Append every result (including SKIP) to the log.
 
