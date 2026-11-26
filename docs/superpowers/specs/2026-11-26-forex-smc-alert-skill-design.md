@@ -183,7 +183,7 @@ chart (labels overlapping, chart not loaded, indicator missing), the result is
 
 ## Run flow (each loop tick)
 
-1. Check the killzone. If outside, log nothing and end the tick.
+1. In `paper` mode, run trade management first (see Paper-trading mode). Then check the killzone. If outside, log nothing and end the tick.
 2. Find the dedicated scanner tab (a separate TradingView layout named
    "SMC Scanner", see Setup). Confirm the user is logged in and the SMC
    indicator is visible. If not, skip this tick and retry on the next one.
