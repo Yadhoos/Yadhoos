@@ -23,6 +23,7 @@ from smc_core.risk import build_plan  # noqa: E402
 from smc_core.session import NY, effective_mode, killzone_at, report_due, seconds_to_next_candle  # noqa: E402
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
+REPORT_WAIT_DAYS = 3
 
 
 class JsonArgParser(argparse.ArgumentParser):
@@ -32,6 +33,12 @@ class JsonArgParser(argparse.ArgumentParser):
 
 
 def _json_arg(text: str) -> dict:
+    """A JSON object, or @path to read it from a file (avoids shell quoting problems)."""
+    if text.startswith("@"):
+        try:
+            text = Path(text[1:]).expanduser().read_text(encoding="utf-8-sig")
+        except OSError as exc:
+            raise ValueError(f"cannot read {text[1:]}: {exc}") from exc
     try:
         value = json.loads(text)
     except json.JSONDecodeError as exc:
@@ -44,13 +51,18 @@ def _json_arg(text: str) -> dict:
 def cmd_status(cfg, now, args):
     exists = (cfg.data_dir / "paper-report.md").exists()
     local = now.astimezone(NY)
+    open_now = store.open_trades(cfg.data_dir)
+    due = report_due(cfg, now, exists)
+    if due and open_now and local.date() <= cfg.paper_until + timedelta(days=REPORT_WAIT_DAYS):
+        due = False  # wait for trades still open at the end of the trial
     return {
         "now_ny": local.isoformat(timespec="minutes"),
         "weekday": local.strftime("%A"),
         "killzone": killzone_at(now),
         "mode": effective_mode(cfg, now),
         "paper_until": cfg.paper_until.isoformat() if cfg.paper_until else None,
-        "report_due": report_due(cfg, now, exists),
+        "report_due": due,
+        "manage_open_trades": bool(open_now),
         "next_tick_s": seconds_to_next_candle(now),
         "symbols": cfg.symbols,
     }
@@ -58,23 +70,32 @@ def cmd_status(cfg, now, args):
 
 def cmd_plan(cfg, now, args):
     pair = args.pair.upper()
-    balance = cfg.balance if args.balance is None else args.balance
-    plan, reason = build_plan(cfg, pair, args.direction, args.entry, args.sl, args.levels,
-                              balance, args.quote_to_account)
+    if args.balance is None:
+        balance, currency = cfg.balance, cfg.account_currency.upper()
+    else:
+        balance, currency = args.balance, (args.balance_currency or "USD").upper()
+    rate = args.quote_to_account
+    if rate is None:
+        if currency != "USD":
+            raise ValueError(f"--quote-to-account (USD to {currency} rate) is required for a {currency} balance")
+        rate = 1.0
+    plan, reason = build_plan(cfg, pair, args.direction, args.entry, args.sl, args.levels, balance, rate)
     spec = cfg.contracts[pair]
     out = {
         "ok": plan is not None,
         "reason": reason,
         "plan": asdict(plan) if plan else None,
         "message": None,
+        "message_alert": None,
         "key": store.setup_key(pair, args.direction, args.entry, spec),
         "duplicate": False,
         "pair_has_open_trade": store.pair_has_open_trade(cfg.data_dir, pair),
     }
     out["duplicate"] = store.is_duplicate(cfg.data_dir, out["key"], now)
     if plan:
-        out["message"] = alert_message(plan, spec, killzone_at(now) or "-", cfg.risk_pct,
-                                       paper=effective_mode(cfg, now) == "paper")
+        kz = killzone_at(now) or "-"
+        out["message"] = alert_message(plan, spec, kz, cfg.risk_pct, paper=effective_mode(cfg, now) == "paper")
+        out["message_alert"] = alert_message(plan, spec, kz, cfg.risk_pct, paper=False)
     return out
 
 
@@ -138,7 +159,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--sl", required=True, type=float)
     s.add_argument("--levels", required=True, type=float, nargs="+")
     s.add_argument("--balance", type=float)
-    s.add_argument("--quote-to-account", type=float, default=1.0)
+    s.add_argument("--balance-currency", help="currency of --balance (default USD)")
+    s.add_argument("--quote-to-account", type=float, help="USD to account-currency rate (required if not USD)")
     s.set_defaults(fn=cmd_plan)
 
     s = sub.add_parser("log-check")
@@ -182,8 +204,9 @@ def main(argv=None) -> int:
         cfg = load_config(args.config)
         print(json.dumps(args.fn(cfg, now, args)))
         return 0
-    except ValueError as exc:
-        print(json.dumps({"error": str(exc)}))
+    except Exception as exc:  # every failure must still be one JSON object
+        msg = str(exc) if isinstance(exc, ValueError) else f"{type(exc).__name__}: {exc}"
+        print(json.dumps({"error": msg}))
         return 2
 
 

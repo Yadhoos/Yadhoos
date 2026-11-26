@@ -83,10 +83,16 @@ def lot_size(risk_amount: float, entry: float, sl: float, spec: ContractSpec, qu
 
 
 def split_lots(total: float, fractions: list) -> list:
-    """Floor each leg to 0.01; the floor leftover goes to leg 1 so legs sum to total."""
+    """Floor each leg to 0.01; the leftover goes to leg 1 so legs sum to total.
+    Then later legs that got 0.00 take 0.01 from leg 1 while leg 1 can spare it,
+    so small positions still keep every target."""
     cents = round(total * 100)
     legs = [math.floor(cents * f + 1e-9) for f in fractions]
     legs[0] += cents - sum(legs)
+    for i in range(1, len(legs)):
+        if legs[i] == 0 and legs[0] > 1:
+            legs[0] -= 1
+            legs[i] = 1
     return [c / 100 for c in legs]
 
 
@@ -95,13 +101,20 @@ def build_plan(cfg: Config, pair: str, direction: str, entry: float, sl: float, 
     pair = pair.upper()
     if pair not in cfg.contracts:
         raise ValueError(f"unknown pair {pair}")
+    for v in (entry, sl, *levels):
+        if not math.isfinite(v):
+            raise ValueError("entry, sl and levels must be real numbers")
     targets, reason = select_targets(direction, entry, sl, levels)
     if reason:
         return None, reason
+    if abs(entry - sl) < cfg.contracts[pair].min_stop - 1e-12:
+        return None, "stop too tight"
     risk_amount = balance * cfg.risk_pct / 100
     total = lot_size(risk_amount, entry, sl, cfg.contracts[pair], quote_to_account)
     if total < 0.01:
         return None, "position too small"
+    if total > cfg.max_lots:
+        return None, "position too large"
     lots = split_lots(total, cfg.partials[len(targets)])
     legs = [Leg(l, t.price, t.r) for l, t in zip(lots, targets) if l > 0]
     return Plan(pair, direction, entry, sl, risk_amount, round(sum(l.lots for l in legs), 2), legs), None

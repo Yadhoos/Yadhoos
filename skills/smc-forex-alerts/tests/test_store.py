@@ -69,3 +69,10 @@ def test_notify_once(tmp_path):
     assert store.notify_once(tmp_path, "setup_problem", T) is True
     assert store.notify_once(tmp_path, "setup_problem", T + timedelta(hours=1)) is False
     assert store.notify_once(tmp_path, "setup_problem", T + timedelta(hours=13)) is True
+
+
+def test_append_after_torn_line_keeps_record(tmp_path):
+    # Final review I2: a torn last line must not swallow the next record
+    (tmp_path / "trades.jsonl").write_text('{"trade_id": "A", "pair": "EU', encoding="utf-8")
+    store.append_trade_event(tmp_path, {"trade_id": "B", "pair": "XAUUSD", "type": "placed"}, T)
+    assert [t["trade_id"] for t in store.open_trades(tmp_path)] == ["B"]

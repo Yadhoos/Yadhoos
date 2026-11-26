@@ -85,3 +85,47 @@ def test_bad_args_json_error(cfg):
     out = run(cfg, "plan", "--pair", "XAUUSD", "--direction", "up", "--entry", "1", "--sl", "2",
               "--levels", "3", code=2)
     assert "error" in out
+
+
+def test_non_usd_account_requires_rate(cfg):
+    # Final review C1: an INR balance must be converted, never treated as USD
+    data = json.loads(cfg.read_text()); data.update(balance=800000, account_currency="INR"); cfg.write_text(json.dumps(data))
+    out = run(cfg, "plan", *GOLD, code=2)
+    assert "quote-to-account" in out["error"]
+    ok = run(cfg, "plan", *GOLD, "--quote-to-account", "84")
+    assert ok["plan"]["total_lots"] == 0.18
+
+
+def test_paper_panel_balance_is_usd(cfg):
+    data = json.loads(cfg.read_text()); data.update(balance=800000, account_currency="INR"); cfg.write_text(json.dumps(data))
+    out = run(cfg, "plan", *GOLD, "--balance", "10000", "--balance-currency", "USD")
+    assert out["plan"]["total_lots"] == 0.19
+
+
+def test_plan_has_alert_only_message(cfg):
+    # Final review I5: after a guard failure Claude needs a message that doesn't claim an order was placed
+    out = run(cfg, "plan", *GOLD)
+    assert out["message"].startswith("PAPER placed: ")
+    assert out["message_alert"] == out["message"][len("PAPER placed: "):]
+
+
+def test_json_from_file(cfg, tmp_path):
+    f = tmp_path / "ev.json"
+    f.write_text(json.dumps({"trade_id": "A", "pair": "EURUSD", "type": "placed"}))
+    run(cfg, "trade", "--json", "@" + str(f))
+    assert len(run(cfg, "trades", "--open")["trades"]) == 1
+
+
+def test_unexpected_error_is_json(cfg):
+    run(cfg, "trade", "--json", json.dumps({"trade_id": "A", "pair": "EURUSD", "type": "placed", "legs": [{"r": 2}]}))
+    out = run(cfg, "trade", "--json", json.dumps({"trade_id": "A", "pair": "EURUSD", "type": "closed"}),
+              "--outcomes", '{"0": "tp"}', code=2)
+    assert "error" in out
+
+
+def test_open_trades_delay_report_and_manage_after_paper_end(cfg):
+    # Final review I4: trades open at paper_until keep being managed; report waits for them (max 3 days)
+    run(cfg, "trade", "--json", json.dumps({"trade_id": "A", "pair": "EURUSD", "type": "placed"}))
+    st = run(cfg, "status", now="2026-12-05T13:00:00+00:00")
+    assert st["mode"] == "alert" and st["manage_open_trades"] is True and st["report_due"] is False
+    assert run(cfg, "status", now="2026-12-08T13:00:00+00:00")["report_due"] is True

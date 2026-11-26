@@ -12,6 +12,7 @@ class ContractSpec:
     units_per_lot: float
     pip_size: float
     price_decimals: int
+    min_stop: float = 0.0  # stops shorter than this are treated as a misread
 
 
 @dataclass(frozen=True)
@@ -25,12 +26,14 @@ class Config:
     contracts: dict
     partials: dict
     data_dir: Path
+    max_lots: float = 10.0
 
 
 DEFAULT_CONTRACTS = {
-    "EURUSD": ContractSpec(100000, 0.0001, 5),
-    "GBPUSD": ContractSpec(100000, 0.0001, 5),
-    "XAUUSD": ContractSpec(100, 0.1, 2),
+    # min_stop = 2x the SL buffer: FX 4 pips, gold 1.0
+    "EURUSD": ContractSpec(100000, 0.0001, 5, 0.0004),
+    "GBPUSD": ContractSpec(100000, 0.0001, 5, 0.0004),
+    "XAUUSD": ContractSpec(100, 0.1, 2, 1.0),
 }
 DEFAULT_PARTIALS = {1: [1.0], 2: [0.6, 0.4], 3: [0.5, 0.3, 0.2]}
 DEFAULT_SYMBOLS = {p: p for p in DEFAULT_CONTRACTS}
@@ -47,7 +50,7 @@ def _parse_date(value) -> date | None:
 
 def load_config(path: Path) -> Config:
     try:
-        raw = json.loads(Path(path).read_text(encoding="utf-8"))
+        raw = json.loads(Path(path).read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"cannot read config {path}: {exc}") from exc
 
@@ -60,14 +63,20 @@ def load_config(path: Path) -> Config:
         raise ValueError(f"risk_pct must be > 0 and <= 5, got {risk_pct}")
 
     balance = float(raw.get("balance", 0))
-    if balance < 0:
-        raise ValueError("balance must not be negative")
+    if balance <= 0:
+        raise ValueError("balance must be your account size (> 0)")
+
+    max_lots = float(raw.get("max_lots", 10.0))
+    if max_lots <= 0:
+        raise ValueError("max_lots must be > 0")
 
     contracts = dict(DEFAULT_CONTRACTS)
     for pair, spec in (raw.get("contracts") or {}).items():
         try:
+            pip = float(spec["pip_size"])
             contracts[pair.upper()] = ContractSpec(
-                float(spec["units_per_lot"]), float(spec["pip_size"]), int(spec["price_decimals"])
+                float(spec["units_per_lot"]), pip, int(spec["price_decimals"]),
+                float(spec.get("min_stop", 4 * pip)),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(f"contracts.{pair} needs units_per_lot, pip_size, price_decimals") from exc
@@ -95,4 +104,5 @@ def load_config(path: Path) -> Config:
         contracts=contracts,
         partials=partials,
         data_dir=data_dir,
+        max_lots=max_lots,
     )

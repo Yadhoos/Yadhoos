@@ -1,7 +1,8 @@
 # Paper trading: placing and managing trades
 
-Use this only when `smc.py status` says `"mode": "paper"`. In alert mode you
-never touch the trading panel.
+**Placing** new trades: only when `smc.py status` says `"mode": "paper"`.
+**Managing** trades already in the journal: whenever `status` says
+`"manage_open_trades": true`, including after the trial ends. Otherwise, never touch the trading panel.
 
 ## The guard (before EVERY order action)
 
@@ -12,7 +13,7 @@ Before every place, modify, cancel or close action:
 3. If it shows anything else (a real broker such as OANDA, a login prompt, or nothing at all):
    - Do not click anything in the panel.
    - Run `python <skill>/scripts/smc.py notify-once --flag guard`. If `send` is true, push the `guard` message from `smc.py message --kind guard`.
-   - Make **no order actions for the rest of this session**. Alerts continue as in alert mode.
+   - Make **no order actions for the rest of this session**. Alerts continue as in alert mode, pushing the plan's `message_alert`, never the `PAPER placed:` `message`.
 
 Never open broker connection dialogs, never log in or out of a broker, and never change account settings. The only clicks allowed in the panel are the order actions below, and only on Paper Trading.
 
@@ -27,7 +28,7 @@ Do this only after `smc.py plan` returned `ok: true`, `duplicate: false` and `pa
    - stop loss = `plan.sl`
    - take profit = `leg.tp`
 3. Confirm each order appears under the panel's **Orders** tab with the right prices. If one fails, cancel the legs you already placed, log a SKIP with reason `order failed`, and stop for this pair.
-4. Record it:
+4. Record it. Copy entry, sl and each leg's `lots`, `tp` and `r` from the `plan` output exactly (legs are numbered from 0 in that order):
    ```
    python <skill>/scripts/smc.py trade --json '{"trade_id":"XAUUSD-202611251230","pair":"XAUUSD","type":"placed","direction":"sell","entry":2388.0,"sl":2393.2,"legs":[{"lots":0.11,"tp":2377.6,"r":2.0},{"lots":0.05,"tp":2366.2,"r":4.2},{"lots":0.03,"tp":2350.0,"r":7.3}],"placed_at":"<ISO time>"}'
    ```

@@ -36,7 +36,16 @@ def read_jsonl(path: Path) -> list:
 
 
 def _append(path: Path, record: dict) -> None:
+    # A torn last line (crash mid-write) has no newline; start a fresh line so
+    # this record isn't glued onto it and lost.
+    needs_nl = False
+    if path.exists() and path.stat().st_size > 0:
+        with open(path, "rb") as fh:
+            fh.seek(-1, 2)
+            needs_nl = fh.read(1) != b"\n"
     with open(path, "a", encoding="utf-8") as fh:
+        if needs_nl:
+            fh.write("\n")
         fh.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 

@@ -74,12 +74,31 @@ def test_split_lots_leftover_to_first_leg():
     assert split_lots(0.19, [0.5, 0.3, 0.2]) == [0.11, 0.05, 0.03]
 
 
-def test_split_drops_zero_leg():
-    assert split_lots(0.03, [0.5, 0.3, 0.2]) == [0.03, 0.0, 0.0]
+def test_split_small_positions_keep_every_target():
+    # Final review I7: each target keeps at least 0.01 when the total allows it
+    assert split_lots(0.03, [0.5, 0.3, 0.2]) == [0.01, 0.01, 0.01]
+    assert split_lots(0.04, [0.5, 0.3, 0.2]) == [0.02, 0.01, 0.01]
+    assert split_lots(0.02, [0.5, 0.3, 0.2]) == [0.01, 0.01, 0.0]
     plan, reason = build_plan(CFG, "XAUUSD", "sell", 2388.0, 2393.2, GOLD_LEVELS, balance=1600)
     assert reason is None
     assert plan.total_lots == 0.03
-    assert [(leg.lots, leg.tp) for leg in plan.legs] == [(0.03, 2377.6)]
+    assert [(leg.lots, leg.tp) for leg in plan.legs] == [(0.01, 2377.6), (0.01, 2366.2), (0.01, 2350.0)]
+
+
+def test_split_drops_zero_leg():
+    plan, _ = build_plan(CFG, "XAUUSD", "sell", 2388.0, 2393.2, GOLD_LEVELS, balance=1100)
+    assert [(leg.lots, leg.tp) for leg in plan.legs] == [(0.01, 2377.6), (0.01, 2366.2)]
+
+
+def test_stop_too_tight_rejected():
+    # Final review I3: a misread SL right next to entry must not create a huge position
+    assert build_plan(CFG, "EURUSD", "buy", 1.10000, 1.09999, [1.1001], balance=10000) == (None, "stop too tight")
+    assert build_plan(CFG, "XAUUSD", "sell", 2388.0, 2388.5, [2386.0], balance=10000) == (None, "stop too tight")
+
+
+def test_position_too_large_rejected():
+    big = replace(CFG, max_lots=1.0)
+    assert build_plan(big, "XAUUSD", "sell", 2388.0, 2393.2, GOLD_LEVELS, balance=100000) == (None, "position too large")
 
 
 def test_build_plan_spec_example():

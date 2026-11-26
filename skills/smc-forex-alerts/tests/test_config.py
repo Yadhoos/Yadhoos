@@ -51,3 +51,18 @@ def test_bad_paper_until_becomes_none(tmp_path):
 def test_risk_pct_bounds(tmp_path, value):
     with pytest.raises(ValueError, match="risk_pct"):
         load_config(write(tmp_path, {"risk_pct": value}))
+
+
+def test_bom_config_loads(tmp_path):
+    p = write(tmp_path, {})
+    p.write_bytes(b"\xef\xbb\xbf" + p.read_bytes())
+    assert load_config(p).mode == "paper"
+
+
+def test_balance_required(tmp_path):
+    with pytest.raises(ValueError, match="balance"):
+        load_config(write(tmp_path, {"balance": 0}))
+
+
+def test_max_lots_default(tmp_path):
+    assert load_config(write(tmp_path, {})).max_lots == 10.0

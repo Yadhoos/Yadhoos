@@ -39,7 +39,8 @@ Copy `config.example.json` to `config.json` in this folder and edit it:
 |---|---|
 | `mode` | `"paper"` for the trial week. Use `"alert"` to only get alerts. |
 | `paper_until` | Your start date + 6 days, e.g. start 2026-11-28 → `"2026-12-04"`. After this date, the scanner switches to alerts on its own. |
-| `balance`, `account_currency` | Your real account size, used for lot sizes in alert mode. |
+| `balance`, `account_currency` | Your real account size and its currency, used for lot sizes in alert mode. If it isn't `USD` (e.g. `INR`), the scanner reads the USD rate from TradingView (e.g. `FX_IDC:USDINR`) before sizing. It never assumes 1:1. |
+| `max_lots` | Safety cap, default `10`. Any setup needing more lots is skipped as a likely chart misread. |
 | `symbols` | The exact TradingView symbols of **your broker's feed**, e.g. `"OANDA:XAUUSD"`, so the alert prices match what you trade. |
 | `contracts` | Leave `{}` unless your broker's lot size differs (standard is 100,000 units for FX, 100 oz for gold). |
 | `partials` | Leave `{}` for 50/30/20 (3 targets) or 60/40 (2 targets). |
